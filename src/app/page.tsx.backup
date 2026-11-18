@@ -1,0 +1,234 @@
+﻿"use client";
+
+import { useMemo, useState } from "react";
+import {
+  LayoutDashboard, Database, ShieldCheck, Settings, Users,
+  Package, Activity, FileText, GitBranch, LockKeyhole,
+  ClipboardCheck, BarChart3, Bell, Search, ChevronDown,
+  Menu, X, ArrowUpRight, ArrowDownRight, Plus, Download,
+  Filter, MoreHorizontal, CircleAlert, CheckCircle2,
+  Clock3, Building2, Layers3, RefreshCw, Eye,
+  ShoppingCart, Truck, UserRound, Zap, Command
+} from "lucide-react";
+
+const navigation = [
+  { id: "dashboard", label: "Overview", icon: LayoutDashboard, group: "WORKSPACE" },
+  { id: "retail", label: "Retail Data", icon: Package, group: "WORKSPACE" },
+  { id: "quality", label: "Data Quality", icon: ShieldCheck, group: "WORKSPACE", count: "8" },
+  { id: "catalogue", label: "Data Catalogue", icon: Database, group: "WORKSPACE" },
+  { id: "policies", label: "Policies & Workflows", icon: ClipboardCheck, group: "GOVERNANCE" },
+  { id: "security", label: "Access Control", icon: LockKeyhole, group: "GOVERNANCE" },
+  { id: "integrations", label: "Integrations", icon: GitBranch, group: "GOVERNANCE" },
+  { id: "lineage", label: "Data Lineage", icon: Layers3, group: "GOVERNANCE" },
+  { id: "compliance", label: "Compliance", icon: FileText, group: "GOVERNANCE" },
+  { id: "audit", label: "Audit & Monitoring", icon: Activity, group: "INSIGHTS" },
+  { id: "reports", label: "Reports & Analytics", icon: BarChart3, group: "INSIGHTS" },
+  { id: "settings", label: "Administration", icon: Settings, group: "SYSTEM" }
+] as const;
+
+type ModuleId = typeof navigation[number]["id"];
+
+const records = [
+  { name: "Product Master", category: "Product", owner: "Merchandising", records: "12,480", quality: 98, status: "Healthy" },
+  { name: "Customer Registry", category: "Customer", owner: "Customer Experience", records: "8,294", quality: 91, status: "Review" },
+  { name: "Inventory Records", category: "Inventory", owner: "Operations", records: "24,810", quality: 96, status: "Healthy" },
+  { name: "Sales Transactions", category: "Sales", owner: "Finance", records: "48,205", quality: 99, status: "Healthy" },
+  { name: "Supplier Directory", category: "Supplier", owner: "Procurement", records: "1,420", quality: 84, status: "Attention" },
+  { name: "Employee Directory", category: "Employee", owner: "Human Resources", records: "864", quality: 95, status: "Healthy" }
+];
+
+const activities = [
+  { title: "Product master updated", detail: "Merchandising · 24 records modified", time: "5 min ago", type: "success" },
+  { title: "Quality rule triggered", detail: "Customer Registry · Missing email values", time: "18 min ago", type: "warning" },
+  { title: "New dataset registered", detail: "Finance · Monthly sales transactions", time: "42 min ago", type: "info" },
+  { title: "Access request submitted", detail: "Operations · Inventory dataset", time: "1 hour ago", type: "info" }
+];
+
+const moduleInfo: Record<ModuleId, { title: string; subtitle: string; button: string; description: string }> = {
+  dashboard: { title: "Governance overview", subtitle: "Monitor your retail data ecosystem from one central workspace.", button: "Generate report", description: "Your organization's governance performance at a glance." },
+  retail: { title: "Retail data management", subtitle: "Manage and govern your core retail business records.", button: "Add record", description: "Products, inventory, sales, customers, suppliers and employees." },
+  quality: { title: "Data quality management", subtitle: "Identify data issues, monitor quality and coordinate corrections.", button: "Create quality rule", description: "Monitor completeness, accuracy, consistency and duplication." },
+  catalogue: { title: "Data catalogue", subtitle: "Discover, classify and manage organizational datasets.", button: "Register dataset", description: "A centralized inventory of business data assets and metadata." },
+  policies: { title: "Policies & workflows", subtitle: "Manage governance policies, ownership and approvals.", button: "Create policy", description: "Coordinate policy reviews, approvals and correction requests." },
+  security: { title: "Access control", subtitle: "Manage users, roles, permissions and access requests.", button: "Invite user", description: "Role-based access control across departments and branches." },
+  integrations: { title: "Data integrations", subtitle: "Connect business systems and monitor data synchronization.", button: "Add integration", description: "POS, ERP, inventory, accounting and external data sources." },
+  lineage: { title: "Data lineage", subtitle: "Trace data origins, transformations and dependencies.", button: "Explore lineage", description: "Understand where data originates and how it moves." },
+  compliance: { title: "Compliance & privacy", subtitle: "Coordinate privacy controls, retention and compliance evidence.", button: "New assessment", description: "Manage consent, retention, privacy requests and incidents." },
+  audit: { title: "Audit & monitoring", subtitle: "Review system events, access history and governance activities.", button: "Export audit log", description: "Maintain visibility into user actions and record changes." },
+  reports: { title: "Reports & analytics", subtitle: "Turn governance information into actionable business insights.", button: "Create report", description: "Analyze quality, compliance, access and branch performance." },
+  settings: { title: "Administration", subtitle: "Configure your organization and platform environment.", button: "Save settings", description: "Manage tenants, branches, departments and system preferences." }
+};
+
+function Metric({ label, value, change, positive, icon: Icon }: any) {
+  return (
+    <div className="metric-card">
+      <div className="metric-top">
+        <span>{label}</span>
+        <span className="metric-icon"><Icon size={18} /></span>
+      </div>
+      <div className="metric-value">{value}</div>
+      <div className="metric-bottom">
+        <span className={positive ? "trend positive" : "trend negative"}>
+          {positive ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
+          {change}
+        </span>
+        <span className="muted">vs last month</span>
+      </div>
+    </div>
+  );
+}
+
+function Dashboard() {
+  return (
+    <>
+      <div className="metrics-grid">
+        <Metric label="Total data assets" value="48,293" change="+12.8%" positive icon={Database} />
+        <Metric label="Data quality score" value="96.4%" change="+2.4%" positive icon={ShieldCheck} />
+        <Metric label="Governance issues" value="23" change="-8.2%" positive icon={CircleAlert} />
+        <Metric label="Active integrations" value="18" change="+3 new" positive icon={GitBranch} />
+      </div>
+
+      <div className="dashboard-grid">
+        <section className="panel quality-panel">
+          <div className="panel-heading">
+            <div>
+              <h3>Data quality performance</h3>
+              <p>Quality distribution across your datasets</p>
+            </div>
+            <button className="subtle-button">Last 30 days <ChevronDown size={14} /></button>
+          </div>
+          <div className="quality-score">
+            <div className="score-ring"><div><strong>96.4%</strong><span>Overall score</span></div></div>
+            <div className="quality-legend">
+              <div><i className="dot green"></i><span>Healthy datasets</span><strong>82%</strong></div>
+              <div><i className="dot blue"></i><span>Needs review</span><strong>13%</strong></div>
+              <div><i className="dot orange"></i><span>Critical issues</span><strong>5%</strong></div>
+            </div>
+          </div>
+          <div className="quality-footer"><span className="green-text"><CheckCircle2 size={15} /> Quality is improving</span><span className="muted">Updated just now</span></div>
+        </section>
+
+        <section className="panel alerts-panel">
+          <div className="panel-heading">
+            <div><h3>Governance alerts</h3><p>Issues requiring your attention</p></div>
+            <span className="alert-count">3 active</span>
+          </div>
+          <div className="alert-item"><span className="alert-icon orange-bg"><CircleAlert size={17}/></span><div><strong>Missing customer information</strong><p>Customer Registry · 18 records</p></div><span className="priority high">High</span></div>
+          <div className="alert-item"><span className="alert-icon blue-bg"><LockKeyhole size={17}/></span><div><strong>Access approval pending</strong><p>Inventory Data · 1 request</p></div><span className="priority medium">Medium</span></div>
+          <div className="alert-item"><span className="alert-icon purple-bg"><Clock3 size={17}/></span><div><strong>Policy review due</strong><p>Data retention · 2 policies</p></div><span className="priority low">Low</span></div>
+          <button className="text-button">View all alerts <ArrowUpRight size={14}/></button>
+        </section>
+
+        <section className="panel department-panel">
+          <div className="panel-heading"><div><h3>Department performance</h3><p>Governance score by department</p></div><button className="icon-button"><MoreHorizontal size={19}/></button></div>
+          {[
+            ["Merchandising", 98], ["Finance", 95], ["Operations", 92], ["Procurement", 86], ["Human Resources", 96]
+          ].map(([name, score]: any) => <div className="performance-row" key={name}><div className="performance-label"><span>{name}</span><strong>{score}%</strong></div><div className="progress-track"><div className="progress-fill" style={{width: `${score}%`}} /></div></div>)}
+        </section>
+
+        <section className="panel branch-panel">
+          <div className="panel-heading"><div><h3>Branch comparison</h3><p>Data governance across locations</p></div><button className="subtle-button">This month <ChevronDown size={14}/></button></div>
+          {[
+            ["Nairobi Central", 98, "1,284 assets"], ["Mombasa Branch", 94, "964 assets"], ["Kisumu Branch", 91, "782 assets"], ["Nakuru Branch", 88, "645 assets"]
+          ].map(([name, score, assets]: any) => <div className="branch-row" key={name}><div className="branch-avatar"><Building2 size={17}/></div><div className="branch-info"><strong>{name}</strong><span>{assets}</span></div><div className="branch-score">{score}%</div></div>)}
+        </section>
+
+        <section className="panel activity-panel">
+          <div className="panel-heading"><div><h3>Recent activity</h3><p>Latest changes across your workspace</p></div><button className="text-button">View activity <ArrowUpRight size={14}/></button></div>
+          {activities.map((item, i) => <div className="activity-row" key={i}><span className={`activity-dot ${item.type}`}></span><div className="activity-content"><strong>{item.title}</strong><p>{item.detail}</p></div><span className="activity-time">{item.time}</span></div>)}
+        </section>
+      </div>
+    </>
+  );
+}
+
+function DataTable({ active }: { active: ModuleId }) {
+  const [filter, setFilter] = useState("");
+  const filtered = useMemo(() => records.filter(r => `${r.name} ${r.category} ${r.owner} ${r.status}`.toLowerCase().includes(filter.toLowerCase())), [filter]);
+
+  const extraRows: Record<string, string[][]> = {
+    quality: [["Customer Registry", "Completeness", "18 issues", "Needs review"], ["Supplier Directory", "Accuracy", "12 issues", "Attention"], ["Inventory Records", "Consistency", "3 issues", "Healthy"]],
+    catalogue: [["Product Master", "Business critical", "Merchandising", "Classified"], ["Customer Registry", "Confidential", "Customer Experience", "Classified"], ["Sales Transactions", "Internal", "Finance", "Registered"]],
+    policies: [["Customer Data Policy", "Data protection", "Compliance", "Active"], ["Data Retention Policy", "Retention", "Legal", "Under review"], ["Access Management", "Security", "IT", "Active"]],
+    security: [["System Administrator", "Administrator", "All departments", "Active"], ["Data Steward", "Steward", "Merchandising", "Active"], ["Branch Manager", "Manager", "Nairobi Central", "Pending"]],
+    integrations: [["POS System", "Point of sale", "5 min ago", "Connected"], ["Inventory ERP", "ERP", "12 min ago", "Connected"], ["Accounting System", "Finance", "Yesterday", "Attention"]],
+    lineage: [["Product Master", "POS System", "Inventory ERP", "Mapped"], ["Customer Registry", "CRM", "Analytics", "Mapped"], ["Sales Transactions", "POS System", "Finance", "Mapped"]],
+    compliance: [["Customer consent", "Privacy", "Customer Registry", "In progress"], ["Retention assessment", "Retention", "Customer data", "Review"], ["Security assessment", "Security", "Platform", "Completed"]],
+    audit: [["Product record updated", "Merchandising", "Today, 10:42", "Success"], ["Login attempt", "Administrator", "Today, 10:18", "Success"], ["Access request", "Operations", "Today, 09:55", "Pending"]],
+    reports: [["Data Quality Report", "Quality", "18 Nov 2026", "Available"], ["Branch Performance", "Operations", "17 Nov 2026", "Available"], ["Access Audit Report", "Security", "16 Nov 2026", "Available"]],
+    settings: [["Organization profile", "Company", "Organization details", "Configured"], ["Branch management", "Locations", "4 branches", "Configured"], ["Department settings", "Structure", "6 departments", "Configured"]]
+  };
+
+  const columns: Record<string, string[]> = {
+    quality: ["Dataset", "Quality dimension", "Issues", "Status"],
+    catalogue: ["Dataset", "Classification", "Owner", "Status"],
+    policies: ["Policy", "Category", "Owner", "Status"],
+    security: ["User / Role", "Permission", "Scope", "Status"],
+    integrations: ["Integration", "Source", "Last sync", "Status"],
+    lineage: ["Dataset", "Source", "Destination", "Status"],
+    compliance: ["Assessment", "Category", "Scope", "Status"],
+    audit: ["Activity", "User", "Timestamp", "Status"],
+    reports: ["Report", "Category", "Last generated", "Status"],
+    settings: ["Configuration", "Category", "Details", "Status"]
+  };
+
+  const defaultRows = active === "retail"
+    ? filtered.map(r => [r.name, r.category, r.owner, r.records])
+    : extraRows[active] || [];
+
+  const headings = active === "retail"
+    ? ["Dataset / Record", "Category", "Department owner", "Records"]
+    : columns[active] || ["Name", "Category", "Owner", "Status"];
+
+  return (
+    <section className="panel table-panel">
+      <div className="table-toolbar">
+        <div className="search-box table-search"><Search size={16}/><input value={filter} onChange={e => setFilter(e.target.value)} placeholder="Search records..."/></div>
+        <button className="subtle-button"><Filter size={15}/> Filter</button>
+        <button className="subtle-button"><Download size={15}/> Export</button>
+      </div>
+      <div className="table-scroll"><table><thead><tr>{headings.map(h => <th key={h}>{h}</th>)}<th>Action</th></tr></thead><tbody>
+        {defaultRows.map((r, i) => <tr key={i}>{r.map((v, j) => <td key={j}>{j === 3 ? <span className={`status-pill ${String(v).toLowerCase().includes("attention") || String(v).toLowerCase().includes("review") || String(v).toLowerCase().includes("pending") ? "warning" : "success"}`}>{v}</span> : v}</td>)}<td><button className="icon-button"><MoreHorizontal size={18}/></button></td></tr>)}
+      </tbody></table></div>
+      <div className="table-footer"><span>Showing {defaultRows.length} records</span><span>Demo data · Backend connection pending</span></div>
+    </section>
+  );
+}
+
+export default function Home() {
+  const [active, setActive] = useState<ModuleId>("dashboard");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [globalSearch, setGlobalSearch] = useState("");
+  const [notice, setNotice] = useState("");
+
+  const info = moduleInfo[active];
+
+  function handleAction() {
+    setNotice(`${info.button} is ready for backend integration. This preview currently uses demonstration data.`);
+  }
+
+  return (
+    <main className="app-shell">
+      {sidebarOpen && <div className="mobile-overlay" onClick={() => setSidebarOpen(false)} />}
+      <aside className={`sidebar ${sidebarOpen ? "sidebar-open" : ""}`}>
+        <div className="brand"><div className="brand-mark"><Layers3 size={21}/></div><div><strong>retrix<span>.</span></strong><small>DATA GOVERNANCE</small></div><button className="mobile-close" onClick={() => setSidebarOpen(false)}><X size={19}/></button></div>
+        <div className="workspace-switch"><div className="workspace-logo">R</div><div><strong>Retail Enterprise</strong><span>Enterprise workspace</span></div><ChevronDown size={15}/></div>
+        <nav className="navigation">
+          {["WORKSPACE", "GOVERNANCE", "INSIGHTS", "SYSTEM"].map(group => <div className="nav-group" key={group}><span className="nav-label">{group}</span>{navigation.filter(n => n.group === group).map(item => { const Icon = item.icon; return <button key={item.id} onClick={() => {setActive(item.id);setSidebarOpen(false);setNotice("");}} className={`nav-item ${active === item.id ? "active" : ""}`}><Icon size={18}/><span>{item.label}</span>{("count" in item) && <small>{item.count}</small>}</button>})}</div>)}
+        </nav>
+        <div className="sidebar-bottom"><div className="support-card"><div className="support-icon"><Zap size={17}/></div><strong>Governance insights</strong><p>Your data governance score improved by 2.4% this month.</p><button onClick={() => setActive("reports")}>Explore insights <ArrowUpRight size={13}/></button></div><div className="user-profile"><div className="user-avatar">KM</div><div><strong>Workspace Admin</strong><span>Administrator</span></div><MoreHorizontal size={18}/></div></div>
+      </aside>
+
+      <section className="main-area">
+        <header className="topbar"><div className="topbar-left"><button className="mobile-menu" onClick={() => setSidebarOpen(true)}><Menu size={21}/></button><div className="breadcrumb">Workspace <span>/</span> <strong>{navigation.find(n => n.id === active)?.label}</strong></div></div><div className="topbar-right"><div className="search-box global-search"><Search size={16}/><input value={globalSearch} onChange={e => setGlobalSearch(e.target.value)} placeholder="Search anything..."/><kbd>⌘ K</kbd></div><button className="icon-button notification-button" onClick={() => setNotice("You have 3 governance alerts to review.")}><Bell size={19}/><i/></button><div className="top-avatar">KM</div></div></header>
+
+        <div className="content">
+          <div className="page-heading"><div><div className="eyebrow"><span className="live-dot"/> SYSTEM OVERVIEW</div><h1>{info.title}</h1><p>{info.subtitle}</p></div><div className="heading-actions"><span className="date-label">18 November 2026</span><button className="primary-button" onClick={handleAction}><Plus size={16}/>{info.button}</button></div></div>
+          {notice && <div className="notice"><CheckCircle2 size={16}/>{notice}<button onClick={() => setNotice("")}><X size={15}/></button></div>}
+          {active === "dashboard" ? <Dashboard/> : <><div className="module-intro"><div className="module-icon"><Command size={20}/></div><div><strong>{info.description}</strong><p>This module is part of your Retrix governance workspace.</p></div><span className="demo-tag">DEMO PREVIEW</span></div><div className="metrics-grid"><Metric label="Total records" value="48,293" change="+12.8%" positive icon={Database}/><Metric label="Healthy records" value="96.4%" change="+2.4%" positive icon={CheckCircle2}/><Metric label="Pending reviews" value="18" change="3 urgent" positive icon={Clock3}/><Metric label="Active users" value="124" change="+8.2%" positive icon={Users}/></div><DataTable active={active}/></>}
+          <footer className="footer"><span>© 2026 Retrix Data Governance Platform</span><span><i className="live-dot"/> All systems operational</span></footer>
+        </div>
+      </section>
+    </main>
+  );
+}

@@ -1,0 +1,268 @@
+"use client";
+
+import { useState, useEffect, useMemo } from "react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
+import {
+  LayoutDashboard, Database, ShieldCheck, Settings,
+  Package, Activity, FileText, GitBranch, LockKeyhole,
+  ClipboardCheck, BarChart3, Bell, Search, ChevronDown,
+  Menu, X, CheckCircle2, Layers3, Zap, Sun, Moon, AlertTriangle, Clock3, LogOut
+} from "lucide-react";
+import FeatureWorkspace from "@/components/feature-workspace";
+import DataQuality from "@/components/data-quality";
+import PolicyWorkflows from "@/components/policy-workflows";
+import ComplianceTracker from "@/components/compliance-tracker";
+import IntegrationsManager from "@/components/integrations-manager";
+import AccessControl from "@/components/access-control";
+import RetailData from "@/components/retail-data";
+import Overview from "@/components/overview";
+
+const navigation = [
+  { id: "dashboard", label: "Overview", icon: LayoutDashboard, group: "WORKSPACE" },
+  { id: "retail", label: "Retail Data", icon: Package, group: "WORKSPACE" },
+  { id: "quality", label: "Data Quality", icon: ShieldCheck, group: "WORKSPACE" },
+  { id: "catalogue", label: "Data Catalogue", icon: Database, group: "WORKSPACE" },
+  { id: "policies", label: "Policies & Workflows", icon: ClipboardCheck, group: "GOVERNANCE" },
+  { id: "security", label: "Access Control", icon: LockKeyhole, group: "GOVERNANCE" },
+  { id: "integrations", label: "Integrations", icon: GitBranch, group: "GOVERNANCE" },
+  { id: "lineage", label: "Data Lineage", icon: Layers3, group: "GOVERNANCE" },
+  { id: "compliance", label: "Compliance", icon: FileText, group: "GOVERNANCE" },
+  { id: "audit", label: "Audit & Monitoring", icon: Activity, group: "INSIGHTS" },
+  { id: "reports", label: "Reports & Analytics", icon: BarChart3, group: "INSIGHTS" },
+  { id: "settings", label: "Administration", icon: Settings, group: "SYSTEM" }
+] as const;
+
+type ModuleId = typeof navigation[number]["id"];
+
+const moduleInfo: Record<ModuleId, { title: string; subtitle: string }> = {
+  dashboard: { title: "Governance overview", subtitle: "Monitor your retail data ecosystem from one central workspace." },
+  retail: { title: "Retail data management", subtitle: "Manage and govern your core retail business records." },
+  quality: { title: "Data quality management", subtitle: "Identify data issues, monitor quality and coordinate corrections." },
+  catalogue: { title: "Data catalogue", subtitle: "Discover, classify and manage organizational datasets." },
+  policies: { title: "Policies & workflows", subtitle: "Manage governance policies, ownership and approvals." },
+  security: { title: "Access control", subtitle: "Manage users, roles, permissions and access requests." },
+  integrations: { title: "Data integrations", subtitle: "Connect business systems and monitor data synchronization." },
+  lineage: { title: "Data lineage", subtitle: "Trace data origins, transformations and dependencies." },
+  compliance: { title: "Compliance & privacy", subtitle: "Coordinate privacy controls, retention and compliance evidence." },
+  audit: { title: "Audit & monitoring", subtitle: "Review system events, access history and governance activities." },
+  reports: { title: "Reports & analytics", subtitle: "Turn governance information into actionable business insights." },
+  settings: { title: "Administration", subtitle: "Configure your organization and platform environment." }
+};
+
+const notifications = [
+  { icon: AlertTriangle, title: "3 quality issues require review", detail: "Open issues in your organization's quality data.", tone: "warning" },
+  { icon: CheckCircle2, title: "Organization synced", detail: "Workspace records refreshed from Supabase.", tone: "good" },
+  { icon: Clock3, title: "Access request pending", detail: "A new member is awaiting role approval.", tone: "neutral" }
+];
+
+export default function Home() {
+  const router = useRouter();
+  const supabase = useMemo(() => createClient(), []);
+  const [active, setActive] = useState<ModuleId>("dashboard");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [orgName, setOrgName] = useState("Workspace");
+  const [userRole, setUserRole] = useState("member");
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [theme, setTheme] = useState<"dark" | "light">("dark");
+
+  const info = moduleInfo[active];
+
+  useEffect(() => {
+    async function loadOrg() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { router.replace("/login"); return; }
+      
+      const { data: member } = await supabase
+        .from("organization_members")
+        .select("organization_id, role")
+        .eq("user_id", user.id)
+        .limit(1)
+        .maybeSingle();
+
+      if (!member) { const { data: joined } = await supabase.rpc("accept_my_invites"); if (joined && joined > 0) { window.location.reload(); return; } router.replace("/setup-organization"); return; }
+      
+      setUserRole(member.role || "member");
+
+      const { data: org } = await supabase
+        .from("organizations")
+        .select("name")
+        .eq("id", member.organization_id)
+        .single();
+        
+      if (org) setOrgName(org.name);
+    }
+    void loadOrg();
+  }, [supabase, router]);
+
+  useEffect(() => {
+    const saved = window.localStorage.getItem("retrix-theme");
+    const initial = saved === "light" || saved === "dark" ? saved : "dark";
+    setTheme(initial);
+    document.body.classList.toggle("light-theme", initial === "light");
+  }, []);
+
+  function toggleTheme() {
+    const next = theme === "dark" ? "light" : "dark";
+    setTheme(next);
+    document.body.classList.toggle("light-theme", next === "light");
+    window.localStorage.setItem("retrix-theme", next);
+  }
+
+  async function handleSignOut() {
+    await supabase.auth.signOut();
+    router.replace("/login");
+  }
+
+  // Format avatar initials and title based on role
+  const getRoleData = (role: string) => {
+    const r = role.toLowerCase();
+    if (r === "admin") return { initials: "AD", label: "Administrator" };
+    if (r === "owner") return { initials: "OW", label: "Workspace Owner" };
+    if (r === "viewer") return { initials: "VW", label: "Viewer" };
+    return { initials: "US", label: "Standard User" };
+  };
+
+  const roleData = getRoleData(userRole);
+
+  return (
+    <main className="app-shell">
+      {sidebarOpen && <div className="mobile-overlay" onClick={() => setSidebarOpen(false)} />}
+      <aside className={`sidebar ${sidebarOpen ? "sidebar-open" : ""}`}>
+        <div className="brand">
+          <div className="brand-mark"><Layers3 size={20} color="white" /></div>
+          <div><strong>retrix<span>.</span></strong><small>DATA GOVERNANCE</small></div>
+          <button className="mobile-close" onClick={() => setSidebarOpen(false)}><X size={19} /></button>
+        </div>
+
+        <div className="workspace-switch">
+          <div className="workspace-logo">{orgName.charAt(0)}</div>
+          <div><strong>{orgName}</strong><span>Enterprise workspace</span></div>
+          <ChevronDown size={15} />
+        </div>
+
+        <nav className="navigation">
+          {["WORKSPACE", "GOVERNANCE", "INSIGHTS", "SYSTEM"].map((group) => (
+            <div className="nav-group" key={group}>
+              <span className="nav-label">{group}</span>
+              {navigation.filter((n) => n.group === group).map((item) => {
+                const Icon = item.icon;
+                return (
+                  <button key={item.id} onClick={() => { setActive(item.id); setSidebarOpen(false); }} className={`nav-item ${active === item.id ? "active" : ""}`}>
+                    <Icon size={18} /><span>{item.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          ))}
+        </nav>
+
+        <div className="sidebar-bottom">
+          <div className="support-card">
+            <div className="support-icon"><Zap size={16} /></div>
+            <strong>Live Workspace</strong>
+            <p>Data is synced securely.</p>
+          </div>
+          <div className="user-profile" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div className="user-avatar">{roleData.initials}</div>
+              <div>
+                <strong>{roleData.label}</strong>
+                <span style={{ textTransform: 'capitalize' }}>{userRole}</span>
+              </div>
+            </div>
+            <button onClick={handleSignOut} style={{ background: 'transparent', border: 0, color: 'var(--muted)', cursor: 'pointer', padding: '5px' }} title="Sign Out">
+              <LogOut size={18} />
+            </button>
+          </div>
+        </div>
+      </aside>
+
+      <section className="main-area">
+        <header className="topbar">
+          <div className="topbar-left">
+            <button className="mobile-menu" onClick={() => setSidebarOpen(true)}><Menu size={21} /></button>
+            <div className="breadcrumb">
+              Workspace <span>/</span> <strong>{navigation.find((n) => n.id === active)?.label}</strong>
+            </div>
+          </div>
+
+          <div className="topbar-right">
+            <div className="search-box global-search">
+              <Search size={16} />
+              <input placeholder="Search anything..." />
+              <kbd>⌘ K</kbd>
+            </div>
+
+            <button className="icon-button" onClick={toggleTheme} title="Toggle theme">
+              {theme === "dark" ? <Sun size={19} /> : <Moon size={19} />}
+            </button>
+
+            <button className="icon-button notification-button" onClick={() => setShowNotifications(!showNotifications)}>
+              <Bell size={19} /><i />
+            </button>
+
+            <div className="top-avatar">{roleData.initials}</div>
+
+            {showNotifications && (
+              <div className="notification-dropdown">
+                <div className="notification-header">
+                  <h3>Notifications</h3>
+                  <span>{notifications.length} new</span>
+                </div>
+                <div className="notification-list">
+                  {notifications.map((n, i) => {
+                    const Icon = n.icon;
+                    return (
+                      <div className="notification-item" key={i}>
+                        <div className={`notification-icon ${n.tone}`}><Icon size={15} /></div>
+                        <div className="notification-content">
+                          <strong>{n.title}</strong>
+                          <p>{n.detail}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="notification-footer" onClick={() => setShowNotifications(false)}>Mark all as read</div>
+              </div>
+            )}
+          </div>
+        </header>
+
+        <div className="content">
+          <div className="page-heading">
+            <div>
+              <div className="eyebrow"><span className="live-dot" /> LIVE DATABASE</div>
+              <h1>{info.title}</h1>
+              <p>{info.subtitle}</p>
+            </div>
+          </div>
+
+          {active === "dashboard" ? (
+            <Overview />
+          ) : active === "retail" ? (
+            <RetailData />
+          ) : active === "quality" ? (
+            <DataQuality />
+          ) : active === "policies" ? (
+            <PolicyWorkflows />
+          ) : active === "security" ? (
+            <AccessControl />
+          ) : active === "integrations" ? (
+            <IntegrationsManager />
+          ) : active === "compliance" ? (
+            <ComplianceTracker />
+          ) : (
+            <FeatureWorkspace active={active} />
+          )}
+
+          <footer className="footer">
+            <span>© 2026 Retrix Data Governance Platform</span>
+            <span><i className="live-dot" /> All systems operational</span>
+          </footer>
+        </div>
+      </section>
+    </main>
+  );
+}
